@@ -3,6 +3,14 @@ const Promise = require('Bluebird');
 const _ = require('lodash')
 const geolib = require('geolib');
 
+const inRange = (a, b, r) => {
+    return geolib.isPointInCircle(
+        {latitude: a.latitude, longitude: a.longitude},
+        {latitude: b.latitude, longitude: b.longitude},
+        r
+    )
+}
+
 const connector = (db) => {
     const router = express.Router();
 
@@ -15,41 +23,30 @@ const connector = (db) => {
         const to = parseInt(req.query.to);
         const minCas = parseInt(req.query.minCas);
         const minInc = parseInt(req.query.minInc);
-        const range = parseInt(req.query.range) / 6371;
+        const range = parseInt(req.query.range) * 1000;
         Countries.find().map((country) => {
             const confCities = Cities
-                .aggregate([
-                    { $match: {"country": country.iso2}},
-                    { $unwind: "$closeIncidents" },
-
-                    { $match: { $and: [
-                        { "closeIncidents.year": {
-                            $gt: from,
-                            $lt: to
-                        } },
-                    ]
-                    }},
-                    { $group: {
-                        _id: {
-                            geoname: "$geonameid",
-                            name: "$name",
-                            latitude: "$latitude",
-                            longitude: "$longitude"
-                        },
-                        incidents: {$sum: 1},
-                        totalDead: {$sum: "$closeIncidents.best_est"}
-                    }},
-                    { $match: { $or: [
-                        { "incidents": { $gt: minInc} },
-                        { "totalDead": { $gt: minCas} }
-                    ]}}
-                ]).toArray()
+                .find({country: country.iso2})
+                .toArray()
+                .then(cities =>
+                    _.size(
+                    _.filter(cities, city => {
+                        const relevantInc = _.filter(city.closeIncidents,
+                            inc => inRange(city, inc, range)
+                                && inc.year <= to
+                                && inc.year >= from)
+                        const totalDead = _.sumBy(relevantInc, inc => inc.best_est)
+                        const incSum = _.size(relevantInc);
+                        return totalDead >= minCas || incSum >= minInc
+                    }))
+                )
 
             const allCities = Cities
                 .find({country: country.iso2})
                 .count()
             return Promise
                 .all([confCities, allCities])
+                .tap(() => console.log(country.country))
                 .then(cities => ({
                     country,
                     confCities: cities[0],
@@ -59,7 +56,6 @@ const connector = (db) => {
             if (err) return res.status(500).send(err);
             Promise
                 .all(countries)
-                .tap(ctrs => console.log(ctrs[0]))
                 .then(ctrs => res.json(ctrs))
 
         })
