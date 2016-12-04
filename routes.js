@@ -2,6 +2,15 @@ const express = require('express');
 const Promise = require('Bluebird');
 const _ = require('lodash')
 const geolib = require('geolib');
+const csv = require('csv-express');
+
+const writeResponse = (res, data, format) => {
+    if (format == 'csv') {
+        res.csv(data, true)
+    } else {
+        res.json(data);
+    }
+}
 
 const inRange = (a, b, r) => {
     return geolib.isPointInCircle(
@@ -16,6 +25,7 @@ const connector = (db) => {
 
     const Cities = db.collection('cities');
     const Countries = db.collection('countries');
+    const UNCHR = db.collection('unhcr');
 
     router.get('/world', (req, res) => {
 
@@ -40,29 +50,49 @@ const connector = (db) => {
                         return totalDead >= minCas || incSum >= minInc
                     }))
                 )
-
             const allCities = Cities
                 .find({country: country.iso2})
                 .count()
             return Promise
                 .all([confCities, allCities])
-                .tap(() => console.log(country.country))
-                .then(cities => ({
-                    country,
+                .then(cities => (
+                    _.assign(country, {
                     confCities: cities[0],
                     allCities: cities[1],
-                }))
+                    ratio: cities[0] / cities[1]
+                })))
         }).toArray((err, countries) => {
             if (err) return res.status(500).send(err);
             Promise
                 .all(countries)
-                .then(ctrs => res.json(ctrs))
+                .then(ctrs => writeResponse(res, ctrs, req.query.format))
 
         })
     });
 
-    router.get('/country', (req, res) => {
-
+    router.get('/country/:ccode', (req, res) => {
+        const { ccode } = req.params;
+        const { confCities, safeCities } = Cities
+            .find({country: ccode})
+            .toArray()
+            .then(cities => {
+                const confCities = [];
+                const safeCities = [];
+                _.forEach(cities, city => {
+                    const relevantInc = _.filter(city.closeIncidents,
+                        inc => inRange(city, inc, range)
+                            && inc.year <= to
+                            && inc.year >= from)
+                    const totalDead = _.sumBy(relevantInc, inc => inc.best_est)
+                    const incSum = _.size(relevantInc);
+                    if (totalDead >= minCas || incSum >= minInc)
+                        confCities.push(city);
+                    else
+                        safeCities.push(city);
+                })
+                return { confCities, safeCities };
+            })
+        const refugeeData =
     });
 
     router.get('/city', (req, res) => {
