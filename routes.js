@@ -25,7 +25,6 @@ const connector = (db) => {
 
     const Cities = db.collection('cities');
     const Countries = db.collection('countries');
-    const UNCHR = db.collection('unhcr');
 
     router.get('/world', (req, res) => {
 
@@ -92,7 +91,6 @@ const connector = (db) => {
                 })
                 return { confCities, safeCities };
             })
-        const refugeeData =
     });
 
     router.get('/city', (req, res) => {
