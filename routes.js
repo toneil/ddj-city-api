@@ -27,7 +27,6 @@ const connector = (db) => {
     const Countries = db.collection('countries');
 
     router.get('/world', (req, res) => {
-
         const from = parseInt(req.query.from);
         const to = parseInt(req.query.to);
         const minCas = parseInt(req.query.minCas);
@@ -71,7 +70,9 @@ const connector = (db) => {
 
     router.get('/country/:ccode', (req, res) => {
         const { ccode } = req.params;
-        const { confCities, safeCities } = Cities
+        const { minCas, minInc, from, to } = req.query;
+        const range = parseInt(req.query.range) * 1000;
+        Cities
             .find({country: ccode})
             .toArray()
             .then(cities => {
@@ -85,17 +86,26 @@ const connector = (db) => {
                     const totalDead = _.sumBy(relevantInc, inc => inc.best_est)
                     const incSum = _.size(relevantInc);
                     if (totalDead >= minCas || incSum >= minInc)
-                        confCities.push(city);
+                        confCities.push(_.assign(city, {closeIncidents:null}));
                     else
-                        safeCities.push(city);
+                        safeCities.push(_.assign(city, {closeIncidents:null}));
+                });
+                Countries.findOne({iso2: ccode}).then(ctry => {
+                    const { country, Population } = ctry;
+                    res.json({
+                        name: country,
+                        population: Population,
+                        confCities,
+                        safeCities
+                    });
                 })
-                return { confCities, safeCities };
             })
     });
-
-    router.get('/city', (req, res) => {
-
-    })
+    router.get('/refugees/:ccode', (req, res) => {
+        const { ccode } = req.params;
+        const path = `./precomputed/refugee_data/refugee_data_${ccode}.json`;
+        res.sendFile(path, {root: __dirname});
+    });
 
     return router;
 };
