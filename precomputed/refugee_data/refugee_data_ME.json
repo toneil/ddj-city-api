@@ -1,0 +1,47 @@
+{
+  "2006": {
+    "idps": 16196,
+    "poc": 0,
+    "refugees": 135
+  },
+  "2007": {
+    "idps": 16155,
+    "poc": 0,
+    "refugees": 557
+  },
+  "2008": {
+    "idps": 0,
+    "poc": 0,
+    "refugees": 1283
+  },
+  "2009": {
+    "idps": 0,
+    "poc": 0,
+    "refugees": 2582
+  },
+  "2010": {
+    "idps": 0,
+    "poc": 0,
+    "refugees": 3246
+  },
+  "2011": {
+    "idps": 0,
+    "poc": 3,
+    "refugees": 3698
+  },
+  "2012": {
+    "idps": 0,
+    "poc": 3,
+    "refugees": 4054
+  },
+  "2013": {
+    "idps": 0,
+    "poc": 10,
+    "refugees": 546
+  },
+  "2014": {
+    "idps": 0,
+    "poc": 0,
+    "refugees": 593
+  }
+}
